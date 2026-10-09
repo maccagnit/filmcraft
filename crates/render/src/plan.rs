@@ -129,6 +129,14 @@ pub fn plan_frame(project: &Project, seq_id: ItemId, t: Tick, opts: RenderOption
     FramePlan::Layers { width: w, height: h, layers }
 }
 
+/// Whether [`plan_frame`] hands the frame at `t` back as one CPU image (an HDR / wide-gamut
+/// sequence, an adjustment layer, a transition the compositor cannot mix). A GPU renderer gains
+/// nothing on such a frame, so a caller with a limited number of them can skip it.
+pub fn is_cpu_frame(project: &Project, seq_id: ItemId, t: Tick) -> bool {
+    let Some(seq) = project.sequence(seq_id) else { return true };
+    !seq.settings.color.is_plain() || !layered_at(project, seq, t)
+}
+
 /// Whether the frame of `seq` at `t` can be planned as layers: no adjustment layer and no
 /// transition the compositor cannot mix itself is showing.
 fn layered_at(project: &Project, seq: &Sequence, t: Tick) -> bool {

@@ -168,8 +168,10 @@ impl Pipeline {
     pub fn frame(&self, f: i64, sources: &dyn SourceProvider) -> (Vec<u8>, Vec<f32>) {
         let t = self.rate.tick_of(f);
         // The registered GPU renderer goes first; `None` (no adapter, a plan the GPU cannot
-        // draw, any internal error) falls back to the CPU reference renderer below.
-        let gpu = match self.renderer.as_ref() {
+        // draw, any internal error) falls back to the CPU reference renderer below. A frame that is
+        // planned as one CPU image anyway (an adjustment layer, a complex transition) does not take
+        // a pooled renderer: it would render on the CPU inside the pool, a few frames at a time.
+        let gpu = match self.renderer.as_ref().filter(|_| !filmcraft_render::plan::is_cpu_frame(&self.project, self.seq, t)) {
             Some(pool) => {
                 let asked = std::time::Instant::now();
                 pool.with(|r| {

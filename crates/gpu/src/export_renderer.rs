@@ -88,6 +88,11 @@ impl ExportRenderer {
         static SHARED: std::sync::OnceLock<Option<(wgpu::Instance, wgpu::Device, wgpu::Queue)>> = std::sync::OnceLock::new();
         let (instance, device, queue) = SHARED
             .get_or_init(|| {
+                // a build without a wgpu backend for this platform (`cargo build -p filmcraft-cli`
+                // alone) has no GPU to offer: `Instance::default()` panics there
+                if wgpu::Instance::enabled_backend_features().is_empty() {
+                    return None;
+                }
                 let instance = wgpu::Instance::default();
                 let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions::default())).ok()?;
                 let (device, queue) = pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor::default())).ok()?;
